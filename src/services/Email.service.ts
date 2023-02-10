@@ -7,7 +7,7 @@ import EMAIL_VERIFICATION from '../mail/email-verification';
 const _nodeMailerModule = new NodemailerModule();
 
 const emailType: EmailType = {
-  WELCOME_EMAIL: ['Welcome to Away Naija', 'welcome'],
+  WELCOME_EMAIL: [`Welcome to ${config.appName}`, 'welcome'],
   PASSWORD_RESET_INSTRUCTION: ['Password Reset Requested', 'password-reset'],
   PASSWORD_RESET_SUCCESSFUL: ['Password Reset', 'password-reset-successful'],
   EMAIL_VERIFICATION: ['Email Verification Requested', 'email-verification'],
@@ -21,7 +21,7 @@ type Data = {
 type EmailOptions = {
   from: string;
   to: string;
-  html?: any;
+  html?: string;
   fullName?: string;
   subject?: string;
 };
@@ -56,12 +56,8 @@ export default class EmailService {
         mailOptions.subject = `[Away Naija] ${subject}`;
         break;
     }
-    try {
-      await _nodeMailerModule.send(mailOptions);
-      log.info(`Email on it's way to ${email}`);
-    } catch (err) {
-      throw err;
-    }
+    await _nodeMailerModule.send(mailOptions);
+    log.info(`Email on it's way to ${email}`);
   }
 
   async _sendWelcomeEmail(fullName: string, email: string) {
@@ -72,7 +68,7 @@ export default class EmailService {
   async _sendUserEmailVerificationEmail(
     fullName: string,
     email: string,
-    token: string
+    token: string,
   ) {
     return await this._sendMail('EMAIL_VERIFICATION', email, {
       fullName,
@@ -83,7 +79,7 @@ export default class EmailService {
   async _sendUserPasswordResetInstructionEmail(
     fullName: string,
     email: string,
-    token: string
+    token: string,
   ) {
     return await this._sendMail('PASSWORD_RESET_INSTRUCTION', email, {
       fullName,

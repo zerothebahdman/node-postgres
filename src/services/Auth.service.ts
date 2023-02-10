@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto';
 import moment from 'moment';
 import UserService from './User.service';
 import EmailService from './Email.service';
+import { JwtPayload } from 'jsonwebtoken';
 
 export default class AuthService {
   constructor(
@@ -48,8 +49,8 @@ export default class AuthService {
 
   async regenerateAccessToken(refreshToken: string): Promise<string> {
     const decodeToken = await new TokenService().verifyToken(refreshToken);
-    const { sub }: any = decodeToken;
-    const user = await prisma.user.findUnique({ where: { id: sub } });
+    const { sub }: string | JwtPayload = decodeToken;
+    const user = await prisma.user.findUnique({ where: { id: sub as string } });
 
     if (!user) throw new Error(`Oops!, user with id ${sub} does not exist`);
 
@@ -65,7 +66,10 @@ export default class AuthService {
     const otp = HelperClass.generateRandomChar(6, 'num');
     const hashedToken = await this.encryptionService.hashString(otp);
 
-    const updateBody: any = {
+    const updateBody: Pick<
+      User,
+      'email_verification_token' | 'email_verification_token_expiry'
+    > = {
       email_verification_token: hashedToken,
       email_verification_token_expiry: moment()
         .add('6', 'hours')

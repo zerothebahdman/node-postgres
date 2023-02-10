@@ -1,10 +1,16 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/ban-types */
-async function paginate<T>(
-  filter: any,
-  options: { orderBy?: any; page?: string; limit?: string; populate?: string },
-  model: T,
+type sortingCriteria = {
+  [key: string]: string;
+};
+async function paginate<T, K>(
+  filter: Partial<T>,
+  options: {
+    orderBy?: string;
+    page?: string;
+    limit?: string;
+    populate?: string;
+  },
+  model: K,
 ) {
   /**
    * 1. check if orderBy is provided in the options,m if it exists, then use it to sort the data in whatever order is provided else use the default order
@@ -19,22 +25,17 @@ async function paginate<T>(
   let orderBy;
   let include;
   if (options.orderBy) {
-    const sortingCriteria: any[] = [];
-    options.orderBy
-      .split(',')
-      .forEach((sortOption: { split: (arg0: string) => [never, never] }) => {
-        const [key, value] = sortOption.split(':');
-        const obj = { key, value };
-        sortingCriteria.push(obj);
-      });
+    const sortingCriteria: sortingCriteria[] = [];
+    options.orderBy.split(',').forEach((sortOption) => {
+      const [key, value] = sortOption.split(':');
+      const obj = { key, value };
+      sortingCriteria.push(obj);
+    });
     // for each of the objects inside the array, make the first value the key and the second value the value
-    orderBy = sortingCriteria.reduce(
-      (acc: any, cur: { key: any; value: unknown }): unknown => {
-        acc[cur.key] = `${cur.value}`;
-        return acc;
-      },
-      {},
-    );
+    orderBy = sortingCriteria.reduce((acc, cur): unknown => {
+      acc[cur.key] = `${cur.value}`;
+      return acc;
+    }, {});
   } else {
     orderBy = [{ created_at: 'desc' }];
   }
@@ -52,15 +53,15 @@ async function paginate<T>(
   // @ts-ignore
   const countPages = await model.count({ where: { ...filter } });
 
-  const populate: Object[] = [];
+  const populate: object[] = [];
   if (options.populate) {
-    options.populate.split(',').forEach((populateOption: any): void => {
+    options.populate.split(',').forEach((populateOption: string): void => {
       const data = { [populateOption]: true };
       populate.push(data);
     });
 
     // convert the array of populate objects to a single object
-    include = populate.reduce((acc: any, cur: any): any => {
+    include = populate.reduce((acc: object, cur: object) => {
       acc = { ...acc, ...cur };
       return acc;
     }, {});
