@@ -53,7 +53,7 @@ export default class EmailService {
         break;
       case 'email-verification':
         mailOptions.html = EMAIL_VERIFICATION(data.fullName, data.token);
-        mailOptions.subject = `[Away Naija] ${subject}`;
+        mailOptions.subject = `${config.appName} ${subject}`;
         break;
     }
     await _nodeMailerModule.send(mailOptions);
