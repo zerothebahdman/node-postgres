@@ -2,7 +2,7 @@ import Joi from 'joi';
 import httpStatus from 'http-status';
 import { NextFunction, Request, Response } from 'express';
 import pick from '../../utils/pick';
-import AppException from '../../exceptions/AppException';
+import AppException from '../../exceptions/appException';
 
 const validate =
   (schema: any) => (req: Request, _res: Response, next: NextFunction) => {
@@ -17,7 +17,7 @@ const validate =
         .map(() => error.message.replaceAll('"', ''))
         .join(', ');
       return next(
-        new AppException(errorMessage, httpStatus.UNPROCESSABLE_ENTITY)
+        new AppException(errorMessage, httpStatus.UNPROCESSABLE_ENTITY),
       );
     }
     Object.assign(req, value);

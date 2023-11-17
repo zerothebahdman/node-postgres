@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import type { ErrorRequestHandler } from 'express';
 import httpStatus from 'http-status';
-import AppException from '../../exceptions/AppException';
+import AppException from '../../exceptions/appException';
 
 export interface Error {
   statusCode: number;
@@ -33,7 +33,7 @@ export const ErrorConverter = (
   err: any,
   _req: Request,
   _res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   let error = err;
   if (!(error instanceof AppException)) {
@@ -48,7 +48,7 @@ export const ErrorHandler: ErrorRequestHandler = (
   err: Error,
   _req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) => {
   err.statusCode = err.statusCode || httpStatus.BAD_REQUEST;
   err.status = err.status || 'error';

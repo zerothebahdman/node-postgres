@@ -8,7 +8,6 @@ const envVarsSchema = Joi.object()
       .required()
       .valid('development', 'production', 'test'),
     PORT: Joi.number().default(8080).required(),
-    FRONTEND_APP_URL: Joi.string().required().label('Frontend APP URL'),
     DATABASE_URL: Joi.string().required().label('Database URL'),
     APP_NAME: Joi.string().required().label('App Name').default('AGSAAP'),
     JWT_ACCESS_TOKEN_EXPIRES: Joi.string()
@@ -24,12 +23,6 @@ const envVarsSchema = Joi.object()
     MAIL_PASSWORD: Joi.string().required().label('Mail Password').required(),
     MAIL_HOST: Joi.string().required().label('Mail Host').required(),
     MAIL_PORT: Joi.number().required().label('Mail Port').required(),
-    CLOUDINARY_NAME: Joi.string().label('Cloudinary Name'),
-    CLOUDINARY_API_KEY: Joi.string().label('Cloudinary API Key'),
-    CLOUDINARY_API_SECRET: Joi.string().label('Cloudinary API Secret'),
-    CRON_SCHEDULE_DELETE_USER_ACCOUNT_IF_NOT_VERIFIED: Joi.string().label(
-      'Cron Schedule Delete User Account If Not Verified',
-    ),
   })
   .unknown();
 const { value: envVars, error } = envVarsSchema

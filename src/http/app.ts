@@ -10,60 +10,71 @@ import morgan from 'morgan';
 import hpp from 'hpp';
 import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
-import AppException from '../exceptions/AppException';
-import httpStatus from 'http-status';
-import config from '../../config/default';
+import mongoSanitize from 'express-mongo-sanitize';
+import AppException from '../exceptions/appException';
+import http from 'http';
+import apiGatewayConfig from '../../config/apiGatewayConfig';
 
-const app: Application = express();
-
-if (config.env === 'production') {
-  app.use(enforce.HTTPS({ trustProtoHeader: true }));
+function getClientIP(req: Request) {
+  const header = req.headers['x-forwarded-for'] as string;
+  if (header) {
+    const ips = header.split(',');
+    return ips[0];
+  }
+  return req.connection.remoteAddress;
 }
+const createServer = async () => {
+  const app: Application = express();
 
-if (config.env === 'development') {
-  app.use(morgan('dev'));
-}
+  if (
+    apiGatewayConfig.env === 'production' ||
+    apiGatewayConfig.env === 'staging'
+  ) {
+    app.use(enforce.HTTPS({ trustProtoHeader: true }));
+  }
 
-app.use(express.json({ limit: '2MB' }));
-app.use(express.urlencoded({ extended: true }));
-app.use(cors());
-app.use(hpp());
-app.use(helmet());
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 20,
-  skipSuccessfulRequests: true,
-  message: 'Too many requests from this IP, please try again in an hour!',
-});
+  if (apiGatewayConfig.env === 'development') {
+    app.use(morgan('dev'));
+  }
 
-app.use('/api', limiter);
-app.disable('x-powered-by');
+  // parse json request body
+  app.use(express.json({ limit: '50mb' }));
+  // parse urlencoded request body
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+  app.use(cors());
+  app.use(hpp());
+  app.use(helmet());
+  app.use(mongoSanitize());
+  if (apiGatewayConfig.env === 'production') {
+    // app.set('trust proxy', true);
+    const limiter = rateLimit({
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      max: 20, // limit each IP to 100 requests per windowMs
+      skipSuccessfulRequests: true,
+      keyGenerator: (req) => getClientIP(req), // Use the custom function to get the IP
+      message: 'Too many requests from this IP, please try again in an 15mins!',
+    });
+    app.use('/api', limiter);
+  }
+  app.disable('x-powered-by');
 
-app.get('/', (_req, res) => {
-  res.send('<b>Welcome to Away 9ja App!</b>');
-});
+  const server = http.createServer(app);
 
-app.use('/api/v1', router);
+  app.get('/', (_req, res) => {
+    res.send('<b>Welcome to your App!</b>');
+  });
 
-app.all('*', (req: Request, _res: Response, next: NextFunction) => {
-  return next(
-    new AppException(
-      `Cant find ${req.originalUrl} on the server.`,
-      httpStatus.NOT_FOUND
-    )
-  );
-});
+  app.use('/api/v1', router);
 
-app.use(ErrorConverter);
-app.use(ErrorHandler);
-export default app;
+  app.all('*', (req: Request, _res: Response, next: NextFunction) => {
+    return next(
+      new AppException(`Cant find ${req.originalUrl} on the server.`, 404),
+    );
+  });
 
-// class App {
-//   public app: Application;
-//   public port: number;
+  app.use(ErrorConverter);
+  app.use(ErrorHandler);
+  return server;
+};
 
-//   constructor() {
-//     this.app = express();
-//     this.port = config.get<number>('port');
-//   };
-// }
+export default createServer;

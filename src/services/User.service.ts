@@ -1,10 +1,10 @@
 import prisma from '../database/model.module';
-import { User } from '@prisma/client';
+import { user_accounts } from '@prisma/client';
 import paginate from '../utils/paginate';
 
 export default class UserService {
   async getAllUsers(
-    filter: Partial<User>,
+    filter: Partial<user_accounts>,
     options: {
       orderBy?: string;
       page?: string;
@@ -13,7 +13,7 @@ export default class UserService {
     } = {},
     ignorePagination = false,
   ): Promise<
-    | User[]
+    | user_accounts[]
     | {
         results: typeof Object;
         page: number;
@@ -23,39 +23,49 @@ export default class UserService {
       }
   > {
     const data = ignorePagination
-      ? await prisma.user.findMany()
-      : await paginate<User, typeof prisma.user>(filter, options, prisma.user);
+      ? await prisma.user_accounts.findMany()
+      : await paginate<user_accounts, typeof prisma.user_accounts>(
+          filter,
+          options,
+          prisma.user_accounts,
+        );
     return data;
   }
 
-  async getUser(filter: Partial<User>): Promise<User> {
-    const data = await prisma.user.findFirst({ where: filter });
+  async getUser(filter: Partial<user_accounts>): Promise<user_accounts> {
+    const data = await prisma.user_accounts.findFirst({ where: filter });
     return data;
   }
 
   async getUserById(
     id: string,
     eagerLoad?: { include: { [key: string]: boolean } },
-  ): Promise<User> {
+  ): Promise<user_accounts> {
     const data = eagerLoad
-      ? await prisma.user.findUnique({ where: { id } })
-      : await prisma.user.findUnique({ where: { id }, ...eagerLoad });
+      ? await prisma.user_accounts.findUnique({ where: { id } })
+      : await prisma.user_accounts.findUnique({ where: { id }, ...eagerLoad });
     if (!data) new Error(`User with id: ${id} does not exist`);
     return data;
   }
 
-  async updateUserById(id: string, updateBody: Partial<User>): Promise<User> {
-    const data = await prisma.user.update({ where: { id }, data: updateBody });
+  async updateUserById(
+    id: string,
+    updateBody: Partial<user_accounts>,
+  ): Promise<user_accounts> {
+    const data = await prisma.user_accounts.update({
+      where: { id },
+      data: updateBody,
+    });
     return data;
   }
 
-  async deleteUserById(id: string): Promise<User> {
-    const data = await prisma.user.delete({ where: { id } });
+  async deleteUserById(id: string): Promise<user_accounts> {
+    const data = await prisma.user_accounts.delete({ where: { id } });
     return data;
   }
 
-  async getUserByEmail(email: string): Promise<User> {
-    const data = await prisma.user.findUnique({ where: { email } });
+  async getUserByEmail(email: string): Promise<user_accounts> {
+    const data = await prisma.user_accounts.findUnique({ where: { email } });
     return data;
   }
 }

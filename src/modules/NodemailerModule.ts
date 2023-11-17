@@ -1,5 +1,5 @@
 import nodemailer, { Transporter } from 'nodemailer';
-import config from '../../config/default';
+import config from '../../config/apiGatewayConfig';
 import log from '../logging/logger';
 
 export type MailData = {

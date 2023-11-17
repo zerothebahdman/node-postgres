@@ -1,47 +1,43 @@
-import EncryptionService from './Encryption.service';
-import TokenService from './Token.service';
+import EncryptionService from './encryption.service';
+import TokenService from './token.service';
 import prisma from '../database/model.module';
-import { User } from '@prisma/client';
-import HelperClass from '../utils/helper';
-import { createHash } from 'node:crypto';
+import { VerificationType, user_accounts, verifications } from '@prisma/client';
 import moment from 'moment';
-import UserService from './User.service';
-import EmailService from './Email.service';
 import { JwtPayload } from 'jsonwebtoken';
 
 export default class AuthService {
   constructor(
     private readonly encryptionService: EncryptionService,
     private readonly tokenService: TokenService,
-    private readonly userService: UserService,
-    private readonly emailService: EmailService,
   ) {}
 
   async createUser(
-    createBody: User,
-  ): Promise<{ user: User; OTP_CODE: string }> {
+    createBody: user_accounts,
+    otp: string,
+  ): Promise<user_accounts> {
     createBody.password = await this.encryptionService.hashPassword(
       createBody.password,
     );
-    const OTP_CODE = HelperClass.generateRandomChar(6, 'num');
-    const hashedToken = createHash('sha512')
-      .update(String(OTP_CODE))
-      .digest('hex');
-
-    createBody.email_verification_token = hashedToken;
-    createBody.email_verification_token_expiry = moment()
-      .add('6', 'hours')
-      .utc()
-      .toDate();
-
-    const user: User = await prisma.user.create({ data: { ...createBody } });
-    return { user, OTP_CODE };
+    const hashedToken = await this.encryptionService.hashString(otp);
+    const user = await prisma.user_accounts.create({
+      data: {
+        ...createBody,
+        verifications: {
+          create: {
+            token: hashedToken,
+            valid_until: moment().add('6', 'hours').utc().toDate(),
+            type: 'email_verification',
+          },
+        },
+      },
+    });
+    return user;
   }
 
-  async loginUser(loginPayload: User) {
+  async loginUser(loginPayload: user_accounts) {
     const token = await this.tokenService.generateToken(
       loginPayload.id,
-      loginPayload.fullName,
+      loginPayload.full_name,
     );
 
     return token;
@@ -50,7 +46,9 @@ export default class AuthService {
   async regenerateAccessToken(refreshToken: string): Promise<string> {
     const decodeToken = await new TokenService().verifyToken(refreshToken);
     const { sub }: string | JwtPayload = decodeToken;
-    const user = await prisma.user.findUnique({ where: { id: sub as string } });
+    const user = await prisma.user_accounts.findUnique({
+      where: { id: sub as string },
+    });
 
     if (!user) throw new Error(`Oops!, user with id ${sub} does not exist`);
 
@@ -62,26 +60,36 @@ export default class AuthService {
     return accessToken;
   }
 
-  async resendOtp(actor: User): Promise<void> {
-    const otp = HelperClass.generateRandomChar(6, 'num');
-    const hashedToken = await this.encryptionService.hashString(otp);
+  async resendVerificationMail(
+    user_id: string,
+    token: string,
+    type: VerificationType,
+  ): Promise<void> {
+    // delete old email verification tokens if exist
+    const deletePrevEmailVerificationIfExist = prisma.verifications.deleteMany({
+      where: { user_account_id: user_id, type },
+    });
 
-    const updateBody: Pick<
-      User,
-      'email_verification_token' | 'email_verification_token_expiry'
-    > = {
-      email_verification_token: hashedToken,
-      email_verification_token_expiry: moment()
-        .add('6', 'hours')
-        .utc()
-        .toDate(),
-    };
-    await this.userService.updateUserById(actor.id, updateBody);
+    const createEmailVerification = prisma.verifications.create({
+      data: {
+        user_account_id: user_id,
+        token,
+        valid_until: moment().add(1, 'days').toDate(),
+        type,
+      },
+      select: null,
+    });
 
-    await this.emailService._sendUserEmailVerificationEmail(
-      actor.fullName,
-      actor.email,
-      otp,
-    );
+    await prisma.$transaction([
+      deletePrevEmailVerificationIfExist,
+      createEmailVerification,
+    ]);
+  }
+
+  async queryVerification(filter: Partial<verifications>) {
+    const data = await prisma.verifications.findFirst({
+      where: filter,
+    });
+    return data;
   }
 }

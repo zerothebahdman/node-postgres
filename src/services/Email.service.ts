@@ -1,4 +1,4 @@
-import config from '../../config/default';
+import config from '../../config/apiGatewayConfig';
 import NodemailerModule from '../modules/NodemailerModule';
 import log from '../logging/logger';
 import PASSWORD_RESET_EMAIL from '../mail/password-reset';

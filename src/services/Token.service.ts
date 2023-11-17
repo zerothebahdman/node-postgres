@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { join } from 'path';
 import log from '../logging/logger';
-import config from '../../config/default';
+import config from '../../config/apiGatewayConfig';
 import { readFile } from 'fs/promises';
 import { createHash } from 'node:crypto';
 import HelperClass from '../utils/helper';

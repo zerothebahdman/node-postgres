@@ -1,3 +1,4 @@
+import { VerificationType } from '@prisma/client';
 import Joi from 'joi';
 
 export const LoginValidator = {
@@ -104,9 +105,12 @@ export const forgotPasswordValidator = {
 };
 
 export const resendOtpValidator = {
-  body: Joi.object().keys({
+  query: Joi.object().keys({
     email: Joi.string().email().lowercase().required().messages({
       'any.required': 'Oops!, you have to specify an email address',
     }),
+    type: Joi.string()
+      .valid(...Object.values(VerificationType))
+      .required(),
   }),
 };
